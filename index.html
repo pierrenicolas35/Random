@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tirage au Sort Express</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+    .container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+    
+    h1 { text-align: center; font-size: 2rem; color: #a5b4fc; }
+    .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+    
+    label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
+    textarea, select, input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; margin-bottom: 15px; }
+    textarea { height: 120px; resize: vertical; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { background: var(--accent-hover); }
+
+    /* Zone Animation & Résultats */
+    .stage { text-align: center; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    .slot-display { font-size: 2.5rem; font-weight: 800; color: #fbbf24; min-height: 3rem; word-break: break-word; }
+    
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+    .result-box { background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
+    .result-box h4 { color: #a5b4fc; margin-bottom: 5px; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎯 Tirage au Sort</h1>
+
+  <div class="card">
+    <label for="mode">Mode de tirage :</label>
+    <select id="mode" onchange="updateUI()">
+      <option value="single">Tirage simple (Gagnant(s))</option>
+      <option value="pairs">Créer des paires / binômes</option>
+      <option value="teams">Créer des équipes</option>
+      <option value="order">Ordre aléatoire (Mélange complet)</option>
+      <option value="match">Associer 2 listes (A -> B)</option>
+    </select>
+
+    <div id="single-opts">
+      <label for="count">Nombre de gagnants à tirer :</label>
+      <input type="number" id="count" value="1" min="1">
+    </div>
+
+    <div id="teams-opts" class="hidden">
+      <label for="team-count">Nombre d'équipes à former :</label>
+      <input type="number" id="team-count" value="2" min="2">
+    </div>
+
+    <div id="primary-list-container">
+      <label id="list1-label" for="list1">Éléments à tirer (un par ligne) :</label>
+      <textarea id="list1" placeholder="Lucas&#10;Thomas&#10;Elisa&#10;Sophie"></textarea>
+    </div>
+
+    <div id="secondary-list-container" class="hidden">
+      <label for="list2">Liste secondaire à associer (un par ligne) :</label>
+      <textarea id="list2" placeholder="Tâche 1&#10;Tâche 2&#10;Tâche 3"></textarea>
+    </div>
+
+    <button onclick="startDraw()">🚀 Lancer le tirage</button>
+  </div>
+
+  <div class="card stage">
+    <div id="slot" class="slot-display"> Prêt ?</div>
+    <div id="results" class="results-grid"></div>
+  </div>
+</div>
+
+<script>
+  function updateUI() {
+    const mode = document.getElementById('mode').value;
+    document.getElementById('single-opts').classList.toggle('hidden', mode !== 'single');
+    document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
+    document.getElementById('secondary-list-container').classList.toggle('hidden', mode !== 'match');
+    
+    const label1 = document.getElementById('list1-label');
+    label1.innerText = (mode === 'match') ? "Liste A (un par ligne) :" : "Éléments à tirer (un par ligne) :";
+  }
+
+  function getCleanList(id) {
+    return document.getElementById(id).value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function shuffle(array) {
+    let arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function startDraw() {
+    const list1 = getCleanList('list1');
+    const mode = document.getElementById('mode').value;
+    const slot = document.getElementById('slot');
+    const resultsDiv = document.getElementById('results');
+
+    if (list1.length === 0) {
+      alert("Veuillez entrer au moins un élément.");
+      return;
+    }
+
+    resultsDiv.innerHTML = '';
+    
+    // Animation de défilement rapide
+    let counter = 0;
+    const interval = setInterval(() => {
+      slot.innerText = list1[Math.floor(Math.random() * list1.length)];
+      counter++;
+      if (counter > 25) {
+        clearInterval(interval);
+        processResults(list1, mode);
+      }
+    }, 60);
+  }
+
+  function processResults(list, mode) {
+    const slot = document.getElementById('slot');
+    const resultsDiv = document.getElementById('results');
+    const shuffled = shuffle(list);
+    
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+    if (mode === 'single') {
+      const count = parseInt(document.getElementById('count').value) || 1;
+      const winners = shuffled.slice(0, count);
+      slot.innerText = winners.length === 1 ? `🎉 ${winners[0]}` : "🎉 Tirage effectué !";
+      
+      if (winners.length > 1) {
+        winners.forEach((w, i) => {
+          resultsDiv.innerHTML += `<div class="result-box"><h4>Gagnant #${i+1}</h4><p>${w}</p></div>`;
+        });
+      }
+    } 
+    else if (mode === 'order') {
+      slot.innerText = "📋 Ordre tiré au sort !";
+      shuffled.forEach((item, i) => {
+        resultsDiv.innerHTML += `<div class="result-box"><h4>Rang #${i+1}</h4><p>${item}</p></div>`;
+      });
+    } 
+    else if (mode === 'pairs') {
+      slot.innerText = "👥 Paires formées !";
+      for (let i = 0; i < shuffled.length; i += 2) {
+        const pair = shuffled.slice(i, i + 2);
+        const title = pair.length === 2 ? `Binôme #${Math.floor(i/2) + 1}` : "Élément seul";
+        resultsDiv.innerHTML += `<div class="result-box"><h4>${title}</h4><p>${pair.join(" & ")}</p></div>`;
+      }
+    } 
+    else if (mode === 'teams') {
+      const numTeams = parseInt(document.getElementById('team-count').value) || 2;
+      slot.innerText = "🏆 Équipes générées !";
+      const teams = Array.from({ length: numTeams }, () => []);
+      
+      shuffled.forEach((item, index) => {
+        teams[index % numTeams].push(item);
+      });
+
+      teams.forEach((team, i) => {
+        resultsDiv.innerHTML += `<div class="result-box"><h4>Équipe ${i+1}</h4><p>${team.join(", ")}</p></div>`;
+      });
+    } 
+    else if (mode === 'match') {
+      const list2 = shuffle(getCleanList('list2'));
+      slot.innerText = "🔗 Associations faites !";
+      
+      shuffled.forEach((item, i) => {
+        const match = list2[i] ? list2[i] : "---";
+        resultsDiv.innerHTML += `<div class="result-box"><h4>${item}</h4><p>➡️ ${match}</p></div>`;
+      });
+    }
+  }
+</script>
+</body>
+</html>
