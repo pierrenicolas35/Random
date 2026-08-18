@@ -1126,6 +1126,11 @@
         return;
       }
 
+      if (mode === 'match' && list2.length === 0) {
+        alert('Ajoute au moins un élément dans la liste B pour créer des associations.');
+        return;
+      }
+
       clearInterval(drawInterval);
       resultsDiv.innerHTML = '';
       stage.dataset.state = 'spinning';
