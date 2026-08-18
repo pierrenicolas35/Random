@@ -1259,9 +1259,16 @@
       }
 
       deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
+      const choice = await deferredInstallPrompt.userChoice;
       deferredInstallPrompt = null;
-      document.getElementById('install-button').classList.add('hidden');
+
+      if (choice.outcome === 'accepted') {
+        document.getElementById('install-button').classList.add('hidden');
+        document.getElementById('install-tip').textContent = 'Installation confirmée. Profite de l’app en mode standalone.';
+        return;
+      }
+
+      document.getElementById('install-tip').textContent = 'Installation annulée. Tu peux réessayer plus tard ou utiliser le menu du navigateur.';
     }
 
     function registerServiceWorker() {

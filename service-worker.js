@@ -41,7 +41,21 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => cachedResponse);
+        .catch(async () => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+
+          return new Response('Hors ligne', {
+            status: 503,
+            statusText: 'Offline',
+            headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
+          });
+        });
 
       return cachedResponse || networkResponse;
     })
