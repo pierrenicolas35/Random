@@ -3,195 +3,1291 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6750a4">
+  <meta name="description" content="Une web app moderne pour organiser des tirages au sort, équipes, binômes, ordres aléatoires et associations de listes.">
   <title>Tirage au Sort Express</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/random-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/random-icon-192.png">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --accent: #6366f1;
-      --accent-hover: #4f46e5;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --border: #334155;
+      --bg: #f4f0ff;
+      --bg-accent: rgba(103, 80, 164, 0.14);
+      --surface: rgba(255, 255, 255, 0.74);
+      --surface-strong: rgba(255, 255, 255, 0.92);
+      --surface-muted: rgba(245, 240, 255, 0.9);
+      --text: #1f1b24;
+      --text-muted: #675f72;
+      --border: rgba(124, 117, 138, 0.2);
+      --accent: #6750a4;
+      --accent-strong: #7f67be;
+      --accent-soft: rgba(103, 80, 164, 0.14);
+      --danger: #ba1a1a;
+      --shadow: 0 20px 60px rgba(44, 32, 70, 0.12);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
-    .container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
-    
-    h1 { text-align: center; font-size: 2rem; color: #a5b4fc; }
-    .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
-    
-    label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
-    textarea, select, input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; margin-bottom: 15px; }
-    textarea { height: 120px; resize: vertical; }
+    body[data-mode="pairs"] {
+      --accent: #006782;
+      --accent-strong: #2886a3;
+      --accent-soft: rgba(0, 103, 130, 0.14);
+      --bg-accent: rgba(0, 103, 130, 0.12);
+    }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+    body[data-mode="teams"] {
+      --accent: #2f6f4f;
+      --accent-strong: #4a8b67;
+      --accent-soft: rgba(47, 111, 79, 0.14);
+      --bg-accent: rgba(47, 111, 79, 0.12);
+    }
 
-    button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    button:hover { background: var(--accent-hover); }
+    body[data-mode="order"] {
+      --accent: #7a5600;
+      --accent-strong: #9a7110;
+      --accent-soft: rgba(122, 86, 0, 0.14);
+      --bg-accent: rgba(122, 86, 0, 0.12);
+    }
 
-    /* Zone Animation & Résultats */
-    .stage { text-align: center; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-    .slot-display { font-size: 2.5rem; font-weight: 800; color: #fbbf24; min-height: 3rem; word-break: break-word; }
-    
-    .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-    .result-box { background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
-    .result-box h4 { color: #a5b4fc; margin-bottom: 5px; }
+    body[data-mode="match"] {
+      --accent: #8f4c38;
+      --accent-strong: #b2684f;
+      --accent-soft: rgba(143, 76, 56, 0.14);
+      --bg-accent: rgba(143, 76, 56, 0.12);
+    }
 
-    .hidden { display: none; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(244, 240, 255, 0.78) 36%, transparent 62%),
+        radial-gradient(circle at bottom right, rgba(222, 237, 255, 0.9), transparent 42%),
+        linear-gradient(160deg, #f8f5ff 0%, #eef3ff 50%, #f9f7ff 100%);
+      transition: background 280ms ease, color 280ms ease;
+    }
+
+    .background-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(18px);
+      opacity: 0.7;
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 12s ease-in-out infinite;
+    }
+
+    .background-orb.orb-a {
+      width: 240px;
+      height: 240px;
+      top: -40px;
+      left: -40px;
+      background: rgba(182, 157, 248, 0.38);
+    }
+
+    .background-orb.orb-b {
+      width: 180px;
+      height: 180px;
+      right: 8%;
+      top: 12%;
+      background: rgba(120, 195, 255, 0.24);
+      animation-delay: -4s;
+    }
+
+    .background-orb.orb-c {
+      width: 220px;
+      height: 220px;
+      right: 5%;
+      bottom: -30px;
+      background: rgba(192, 232, 184, 0.28);
+      animation-delay: -8s;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .card {
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .hero-card {
+      display: grid;
+      gap: 18px;
+      padding: 28px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(251, 248, 255, 0.62)),
+        linear-gradient(120deg, var(--bg-accent), transparent 45%);
+    }
+
+    .hero-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .hero-card h1 {
+      max-width: 14ch;
+      font-size: clamp(2.4rem, 4vw, 4.4rem);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+    }
+
+    .hero-card p {
+      max-width: 65ch;
+      color: var(--text-muted);
+      font-size: 1.02rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions,
+    .button-cluster {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .controls-card,
+    .library-card,
+    .experience-card {
+      padding: 24px;
+    }
+
+    .section-heading {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .section-heading h2 {
+      font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+      letter-spacing: -0.03em;
+    }
+
+    .section-heading p {
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .field-grid,
+    .saved-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field,
+    .field--full {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field--full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .supporting-text {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface-strong);
+      color: var(--text);
+      padding: 14px 16px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 5px var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    textarea {
+      min-height: 176px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .textareas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .list-card {
+      padding: 18px;
+      border-radius: 22px;
+      background: var(--surface-muted);
+      border: 1px solid rgba(124, 117, 138, 0.14);
+      display: grid;
+      gap: 12px;
+    }
+
+    .button-cluster {
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease, opacity 180ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(52, 40, 86, 0.16);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      box-shadow: none;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #fff;
+      flex: 1 1 220px;
+    }
+
+    .button-secondary {
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--accent);
+      border: 1px solid rgba(124, 117, 138, 0.2);
+    }
+
+    .button-tonal {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .button-danger {
+      background: rgba(186, 26, 26, 0.1);
+      color: var(--danger);
+    }
+
+    .stage {
+      position: sticky;
+      top: 24px;
+      overflow: hidden;
+      min-height: 100%;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 247, 255, 0.82)),
+        radial-gradient(circle at top right, var(--accent-soft), transparent 55%);
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: -30% 18% auto auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-soft), transparent 72%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .stage-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stage-badge,
+    .stage-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .stage-badge {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .stage-state {
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--text-muted);
+      border: 1px solid rgba(124, 117, 138, 0.14);
+    }
+
+    .stage-orbit {
+      position: relative;
+      min-height: 164px;
+      display: grid;
+      gap: 12px;
+      align-content: center;
+      z-index: 1;
+    }
+
+    .stage-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(124, 117, 138, 0.18);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(60, 45, 92, 0.08);
+      animation-delay: var(--delay, 0s);
+    }
+
+    .stage[data-mode="single"] .stage-orbit {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stage[data-mode="single"] .stage-chip {
+      animation: float-chip 5s ease-in-out infinite;
+    }
+
+    .stage[data-mode="pairs"] .stage-orbit {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stage[data-mode="pairs"] .stage-chip {
+      position: relative;
+      animation: sway-chip 4.4s ease-in-out infinite;
+    }
+
+    .stage[data-mode="pairs"] .stage-chip:nth-child(odd)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -18px;
+      width: 18px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0.45;
+    }
+
+    .stage[data-mode="teams"] .stage-orbit {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stage[data-mode="teams"] .stage-chip {
+      animation: bounce-chip 3.2s ease-in-out infinite;
+    }
+
+    .stage[data-mode="order"] .stage-orbit {
+      grid-template-columns: 1fr;
+      max-width: 260px;
+    }
+
+    .stage[data-mode="order"] .stage-chip {
+      animation: ticker-chip 2.8s ease-in-out infinite;
+    }
+
+    .stage[data-mode="match"] .stage-orbit {
+      grid-template-columns: 1fr;
+    }
+
+    .match-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      animation: reveal-up 420ms ease both;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .match-arrow {
+      font-size: 1.25rem;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .slot-display {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.05em;
+      font-weight: 900;
+      word-break: break-word;
+    }
+
+    .stage-caption {
+      position: relative;
+      z-index: 1;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .stage[data-state="spinning"] .slot-display {
+      animation: slot-roll 480ms ease-in-out infinite alternate;
+    }
+
+    .stage[data-state="spinning"] .stage-state {
+      color: var(--accent);
+      border-color: rgba(124, 117, 138, 0.16);
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .results-grid {
+      display: grid;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .results-grid:empty {
+      display: none;
+    }
+
+    .result-box {
+      padding: 16px 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(124, 117, 138, 0.16);
+      box-shadow: 0 10px 24px rgba(60, 45, 92, 0.08);
+      animation: reveal-up 420ms ease both;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .result-box h4 {
+      color: var(--accent);
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .result-box p {
+      color: var(--text);
+      line-height: 1.5;
+      font-weight: 600;
+    }
+
+    .saved-preview {
+      margin-top: 18px;
+      border-radius: 22px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px dashed rgba(124, 117, 138, 0.2);
+      display: grid;
+      gap: 10px;
+    }
+
+    .saved-preview h3 {
+      font-size: 0.92rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .saved-preview ul {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .saved-preview li {
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(124, 117, 138, 0.14);
+      font-size: 0.95rem;
+    }
+
+    .install-tip {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(18px) translateX(12px); }
+    }
+
+    @keyframes float-chip {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.03); }
+    }
+
+    @keyframes sway-chip {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(8px); }
+    }
+
+    @keyframes bounce-chip {
+      0%, 100% { transform: translateY(0); }
+      45% { transform: translateY(-10px); }
+      70% { transform: translateY(2px); }
+    }
+
+    @keyframes ticker-chip {
+      0%, 100% { transform: translateY(0); opacity: 1; }
+      50% { transform: translateY(-8px); opacity: 0.82; }
+    }
+
+    @keyframes slot-roll {
+      0% { transform: translateY(0) scale(0.98); opacity: 0.72; }
+      100% { transform: translateY(-4px) scale(1.02); opacity: 1; }
+    }
+
+    @keyframes reveal-up {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .stage {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero-card,
+      .controls-card,
+      .library-card,
+      .experience-card {
+        padding: 20px;
+        border-radius: 26px;
+      }
+
+      .field-grid,
+      .saved-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stage[data-mode="teams"] .stage-orbit,
+      .stage[data-mode="single"] .stage-orbit,
+      .stage[data-mode="pairs"] .stage-orbit {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
   </style>
 </head>
-<body>
+<body data-mode="single">
+  <div class="background-orb orb-a"></div>
+  <div class="background-orb orb-b"></div>
+  <div class="background-orb orb-c"></div>
 
-<div class="container">
-  <h1>🎯 Tirage au Sort</h1>
+  <main class="app-shell">
+    <header class="card hero-card">
+      <div class="hero-topline">
+        <span class="eyebrow">Material You · Random</span>
+        <div class="hero-actions">
+          <button id="install-button" class="button-secondary hidden" type="button" onclick="installApp()">Installer l’app</button>
+        </div>
+      </div>
+      <div class="section-heading">
+        <h1>Tirage au sort premium, fluide et réutilisable.</h1>
+        <p>
+          Organise un gagnant, des binômes, des équipes, un ordre complet ou une association de listes
+          dans une interface moderne avec animations contextuelles, listes sauvegardées et support installable.
+        </p>
+      </div>
+      <p class="install-tip" id="install-tip">L’app peut être installée sur mobile ou desktop dès que le navigateur propose l’option.</p>
+    </header>
 
-  <div class="card">
-    <label for="mode">Mode de tirage :</label>
-    <select id="mode" onchange="updateUI()">
-      <option value="single">Tirage simple (Gagnant(s))</option>
-      <option value="pairs">Créer des paires / binômes</option>
-      <option value="teams">Créer des équipes</option>
-      <option value="order">Ordre aléatoire (Mélange complet)</option>
-      <option value="match">Associer 2 listes (A -> B)</option>
-    </select>
+    <section class="workspace">
+      <div class="panel-stack">
+        <section class="card controls-card">
+          <div class="section-heading">
+            <span class="eyebrow">Configuration</span>
+            <h2>Compose ton tirage</h2>
+            <p id="mode-description">Tire un ou plusieurs gagnants avec une mise en scène légère et un résultat instantanément lisible.</p>
+          </div>
 
-    <div id="single-opts">
-      <label for="count">Nombre de gagnants à tirer :</label>
-      <input type="number" id="count" value="1" min="1">
-    </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="mode">Mode de tirage</label>
+              <select id="mode" onchange="updateUI()">
+                <option value="single">Tirage simple (Gagnant(s))</option>
+                <option value="pairs">Créer des paires / binômes</option>
+                <option value="teams">Créer des équipes</option>
+                <option value="order">Ordre aléatoire (Mélange complet)</option>
+                <option value="match">Associer 2 listes (A → B)</option>
+              </select>
+            </div>
 
-    <div id="teams-opts" class="hidden">
-      <label for="team-count">Nombre d'équipes à former :</label>
-      <input type="number" id="team-count" value="2" min="2">
-    </div>
+            <div id="single-opts" class="field">
+              <label for="count">Nombre de gagnants</label>
+              <input type="number" id="count" value="1" min="1">
+            </div>
 
-    <div id="primary-list-container">
-      <label id="list1-label" for="list1">Éléments à tirer (un par ligne) :</label>
-      <textarea id="list1" placeholder="Lucas&#10;Thomas&#10;Elisa&#10;Sophie"></textarea>
-    </div>
+            <div id="teams-opts" class="field hidden">
+              <label for="team-count">Nombre d’équipes</label>
+              <input type="number" id="team-count" value="2" min="2">
+            </div>
+          </div>
 
-    <div id="secondary-list-container" class="hidden">
-      <label for="list2">Liste secondaire à associer (un par ligne) :</label>
-      <textarea id="list2" placeholder="Tâche 1&#10;Tâche 2&#10;Tâche 3"></textarea>
-    </div>
+          <div class="textareas-grid">
+            <div id="primary-list-container" class="list-card">
+              <div class="field">
+                <label id="list1-label" for="list1">Éléments à tirer (un par ligne)</label>
+                <p class="supporting-text">Ajoute autant d’entrées que nécessaire, avec une entrée par ligne.</p>
+                <textarea id="list1" placeholder="Lucas&#10;Thomas&#10;Elisa&#10;Sophie"></textarea>
+              </div>
+            </div>
 
-    <button onclick="startDraw()">🚀 Lancer le tirage</button>
-  </div>
+            <div id="secondary-list-container" class="list-card hidden">
+              <div class="field">
+                <label for="list2">Liste secondaire à associer (un par ligne)</label>
+                <p class="supporting-text">Utilisée uniquement dans le mode d’association A → B.</p>
+                <textarea id="list2" placeholder="Tâche 1&#10;Tâche 2&#10;Tâche 3"></textarea>
+              </div>
+            </div>
+          </div>
 
-  <div class="card stage">
-    <div id="slot" class="slot-display"> Prêt ?</div>
-    <div id="results" class="results-grid"></div>
-  </div>
-</div>
+          <div class="button-cluster">
+            <button id="draw-button" class="button-primary" type="button" onclick="startDraw()">Lancer le tirage</button>
+          </div>
+        </section>
 
-<script>
-  function updateUI() {
-    const mode = document.getElementById('mode').value;
-    document.getElementById('single-opts').classList.toggle('hidden', mode !== 'single');
-    document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
-    document.getElementById('secondary-list-container').classList.toggle('hidden', mode !== 'match');
-    
-    const label1 = document.getElementById('list1-label');
-    label1.innerText = (mode === 'match') ? "Liste A (un par ligne) :" : "Éléments à tirer (un par ligne) :";
-  }
+        <section class="card library-card">
+          <div class="section-heading">
+            <span class="eyebrow">Listes sauvegardées</span>
+            <h2>Prépare des listes réutilisables</h2>
+            <p>Crée, renomme, mets à jour ou supprime tes listes favorites. Elles sont conservées localement dans ton navigateur.</p>
+          </div>
 
-  function getCleanList(id) {
-    return document.getElementById(id).value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-  }
+          <div class="saved-grid">
+            <div class="field">
+              <label for="saved-list-name">Nom de la liste</label>
+              <input id="saved-list-name" type="text" placeholder="Ex. Participants atelier">
+            </div>
 
-  function shuffle(array) {
-    let arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  }
+            <div class="field">
+              <label for="save-source">Source à sauvegarder</label>
+              <select id="save-source">
+                <option value="list1">Liste A / principale</option>
+                <option value="list2">Liste B / secondaire</option>
+              </select>
+            </div>
 
-  function startDraw() {
-    const list1 = getCleanList('list1');
-    const mode = document.getElementById('mode').value;
-    const slot = document.getElementById('slot');
-    const resultsDiv = document.getElementById('results');
+            <div class="field field--full">
+              <div class="button-cluster">
+                <button class="button-tonal" type="button" onclick="saveCurrentList()">Créer la liste</button>
+                <button id="update-list-button" class="button-secondary" type="button" onclick="updateSavedList()" disabled>Mettre à jour</button>
+              </div>
+            </div>
 
-    if (list1.length === 0) {
-      alert("Veuillez entrer au moins un élément.");
-      return;
-    }
+            <div class="field">
+              <label for="saved-list-select">Bibliothèque</label>
+              <select id="saved-list-select" onchange="handleSavedListSelection()">
+                <option value="">Aucune liste enregistrée</option>
+              </select>
+            </div>
 
-    resultsDiv.innerHTML = '';
-    
-    // Animation de défilement rapide
-    let counter = 0;
-    const interval = setInterval(() => {
-      slot.innerText = list1[Math.floor(Math.random() * list1.length)];
-      counter++;
-      if (counter > 25) {
-        clearInterval(interval);
-        processResults(list1, mode);
+            <div class="field">
+              <label>Réutiliser la sélection</label>
+              <div class="button-cluster">
+                <button id="apply-list1-button" class="button-secondary" type="button" onclick="applySavedList('list1')" disabled>Charger vers liste A</button>
+                <button id="apply-list2-button" class="button-secondary" type="button" onclick="applySavedList('list2')" disabled>Charger vers liste B</button>
+                <button id="delete-list-button" class="button-danger" type="button" onclick="deleteSavedList()" disabled>Supprimer</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="saved-preview" class="saved-preview">
+            <h3>Aperçu</h3>
+            <p class="supporting-text">Choisis une liste sauvegardée pour voir son contenu ici.</p>
+          </div>
+        </section>
+      </div>
+
+      <aside id="stage" class="card experience-card stage" data-mode="single" data-state="idle">
+        <div class="stage-topline">
+          <span id="stage-badge" class="stage-badge">Tirage simple</span>
+          <span id="stage-state" class="stage-state">En attente</span>
+        </div>
+        <div id="stageOrbit" class="stage-orbit"></div>
+        <div id="slot" class="slot-display">Prêt pour un tirage immersif ?</div>
+        <p id="stage-caption" class="stage-caption">Choisis un mode, renseigne une liste et laisse l’animation révéler le résultat.</p>
+        <div id="results" class="results-grid"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'random-saved-lists-v1';
+    const MODE_META = {
+      single: {
+        badge: 'Tirage simple',
+        description: 'Tire un ou plusieurs gagnants avec une mise en scène légère et un résultat instantanément lisible.',
+        caption: 'Une animation lumineuse met chaque candidat en tension avant la révélation finale.'
+      },
+      pairs: {
+        badge: 'Binômes',
+        description: 'Forme des paires rapidement avec une animation rythmée qui rapproche visuellement les éléments.',
+        caption: 'Les cartes se synchronisent par duo pour révéler des binômes équilibrés.'
+      },
+      teams: {
+        badge: 'Équipes',
+        description: 'Répartis ton groupe en équipes avec un rendu plus structuré et des groupes mis en valeur.',
+        caption: 'Les éléments se répartissent en colonnes pour simuler la formation des équipes.'
+      },
+      order: {
+        badge: 'Ordre aléatoire',
+        description: 'Génère un ordre complet avec un effet de file animée pour bien suivre le classement.',
+        caption: 'Une animation de ticker donne l’impression que les rangs se mettent en place.'
+      },
+      match: {
+        badge: 'Association A → B',
+        description: 'Associe deux listes en gardant une lecture claire de chaque correspondance obtenue.',
+        caption: 'Les lignes de liaison visualisent les correspondances entre les deux listes.'
       }
-    }, 60);
-  }
+    };
 
-  function processResults(list, mode) {
-    const slot = document.getElementById('slot');
-    const resultsDiv = document.getElementById('results');
-    const shuffled = shuffle(list);
-    
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    let drawInterval = null;
+    let deferredInstallPrompt = null;
 
-    if (mode === 'single') {
-      const count = parseInt(document.getElementById('count').value) || 1;
-      const winners = shuffled.slice(0, count);
-      slot.innerText = winners.length === 1 ? `🎉 ${winners[0]}` : "🎉 Tirage effectué !";
-      
-      if (winners.length > 1) {
-        winners.forEach((w, i) => {
-          resultsDiv.innerHTML += `<div class="result-box"><h4>Gagnant #${i+1}</h4><p>${w}</p></div>`;
+    function initApp() {
+      updateUI();
+      renderSavedLists();
+      renderStageDecor('single', []);
+      registerServiceWorker();
+
+      ['list1', 'list2'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', () => {
+          if (document.getElementById('stage').dataset.state !== 'spinning') {
+            renderStageDecor(
+              document.getElementById('mode').value,
+              getCleanList('list1'),
+              getCleanList('list2')
+            );
+          }
+        });
+      });
+
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        document.getElementById('install-button').classList.remove('hidden');
+        document.getElementById('install-tip').textContent = 'Installation disponible : ajoute cette app sur ton écran d’accueil ou ton bureau.';
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        document.getElementById('install-button').classList.add('hidden');
+        document.getElementById('install-tip').textContent = 'Application installée avec succès.';
+      });
+    }
+
+    function updateUI() {
+      const mode = document.getElementById('mode').value;
+      const stage = document.getElementById('stage');
+      const label1 = document.getElementById('list1-label');
+      const meta = MODE_META[mode];
+      const saveSource = document.getElementById('save-source');
+      const secondarySourceOption = saveSource.querySelector('option[value="list2"]');
+
+      document.body.dataset.mode = mode;
+      stage.dataset.mode = mode;
+      document.getElementById('single-opts').classList.toggle('hidden', mode !== 'single');
+      document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
+      document.getElementById('secondary-list-container').classList.toggle('hidden', mode !== 'match');
+      secondarySourceOption.disabled = mode !== 'match';
+      if (mode !== 'match' && saveSource.value === 'list2') {
+        saveSource.value = 'list1';
+      }
+
+      label1.innerText = mode === 'match' ? 'Liste A (un par ligne)' : 'Éléments à tirer (un par ligne)';
+      document.getElementById('mode-description').textContent = meta.description;
+      document.getElementById('stage-badge').textContent = meta.badge;
+
+      if (stage.dataset.state !== 'spinning') {
+        document.getElementById('stage-caption').textContent = meta.caption;
+        renderStageDecor(mode, getCleanList('list1'), getCleanList('list2'));
+      }
+    }
+
+    function getCleanList(id) {
+      return document.getElementById(id).value
+        .split('\n')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function loadSavedLists() {
+      try {
+        const rawValue = localStorage.getItem(STORAGE_KEY);
+        const parsed = rawValue ? JSON.parse(rawValue) : [];
+        return Array.isArray(parsed)
+          ? parsed.filter((entry) => entry && typeof entry.name === 'string' && Array.isArray(entry.items))
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function persistSavedLists(lists) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+    }
+
+    function renderSavedLists(selectedName = '') {
+      const select = document.getElementById('saved-list-select');
+      const lists = loadSavedLists().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      const currentName = selectedName || select.value;
+
+      select.innerHTML = '';
+
+      if (lists.length === 0) {
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'Aucune liste enregistrée';
+        select.appendChild(emptyOption);
+      } else {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Choisir une liste';
+        select.appendChild(placeholder);
+
+        lists.forEach((list) => {
+          const option = document.createElement('option');
+          option.value = list.name;
+          option.textContent = `${list.name} (${list.items.length})`;
+          select.appendChild(option);
         });
       }
-    } 
-    else if (mode === 'order') {
-      slot.innerText = "📋 Ordre tiré au sort !";
-      shuffled.forEach((item, i) => {
-        resultsDiv.innerHTML += `<div class="result-box"><h4>Rang #${i+1}</h4><p>${item}</p></div>`;
-      });
-    } 
-    else if (mode === 'pairs') {
-      slot.innerText = "👥 Paires formées !";
-      for (let i = 0; i < shuffled.length; i += 2) {
-        const pair = shuffled.slice(i, i + 2);
-        const title = pair.length === 2 ? `Binôme #${Math.floor(i/2) + 1}` : "Élément seul";
-        resultsDiv.innerHTML += `<div class="result-box"><h4>${title}</h4><p>${pair.join(" & ")}</p></div>`;
-      }
-    } 
-    else if (mode === 'teams') {
-      const numTeams = parseInt(document.getElementById('team-count').value) || 2;
-      slot.innerText = "🏆 Équipes générées !";
-      const teams = Array.from({ length: numTeams }, () => []);
-      
-      shuffled.forEach((item, index) => {
-        teams[index % numTeams].push(item);
-      });
 
-      teams.forEach((team, i) => {
-        resultsDiv.innerHTML += `<div class="result-box"><h4>Équipe ${i+1}</h4><p>${team.join(", ")}</p></div>`;
-      });
-    } 
-    else if (mode === 'match') {
-      const list2 = shuffle(getCleanList('list2'));
-      slot.innerText = "🔗 Associations faites !";
-      
-      shuffled.forEach((item, i) => {
-        const match = list2[i] ? list2[i] : "---";
-        resultsDiv.innerHTML += `<div class="result-box"><h4>${item}</h4><p>➡️ ${match}</p></div>`;
+      select.value = lists.some((list) => list.name === currentName) ? currentName : '';
+      handleSavedListSelection();
+    }
+
+    function handleSavedListSelection() {
+      const name = document.getElementById('saved-list-select').value;
+      const lists = loadSavedLists();
+      const selected = lists.find((list) => list.name === name);
+      const preview = document.getElementById('saved-preview');
+      const nameInput = document.getElementById('saved-list-name');
+
+      document.getElementById('update-list-button').disabled = !selected;
+      document.getElementById('delete-list-button').disabled = !selected;
+      document.getElementById('apply-list1-button').disabled = !selected;
+      document.getElementById('apply-list2-button').disabled = !selected;
+
+      if (!selected) {
+        preview.innerHTML = '<h3>Aperçu</h3><p class="supporting-text">Choisis une liste sauvegardée pour voir son contenu ici.</p>';
+        return;
+      }
+
+      nameInput.value = selected.name;
+      const itemsMarkup = selected.items
+        .slice(0, 8)
+        .map((item) => `<li>${escapeHTML(item)}</li>`)
+        .join('');
+      const extraCount = selected.items.length > 8 ? `<p class="supporting-text">+ ${selected.items.length - 8} élément(s) supplémentaires</p>` : '';
+
+      preview.innerHTML = `
+        <h3>${escapeHTML(selected.name)}</h3>
+        <ul>${itemsMarkup}</ul>
+        ${extraCount}
+      `;
+    }
+
+    function saveCurrentList() {
+      const name = document.getElementById('saved-list-name').value.trim();
+      const source = document.getElementById('save-source').value;
+      const items = getCleanList(source);
+      const lists = loadSavedLists();
+
+      if (!name) {
+        alert('Donne un nom à ta liste avant de l’enregistrer.');
+        return;
+      }
+
+      if (items.length === 0) {
+        alert('La source choisie ne contient aucun élément à sauvegarder.');
+        return;
+      }
+
+      if (lists.some((list) => list.name === name)) {
+        alert('Une liste portant ce nom existe déjà. Utilise "Mettre à jour" pour la modifier.');
+        return;
+      }
+
+      lists.push({ name, items, updatedAt: new Date().toISOString() });
+      persistSavedLists(lists);
+      renderSavedLists(name);
+    }
+
+    function updateSavedList() {
+      const selectedName = document.getElementById('saved-list-select').value;
+      const targetName = document.getElementById('saved-list-name').value.trim() || selectedName;
+      const source = document.getElementById('save-source').value;
+      const items = getCleanList(source);
+      const lists = loadSavedLists();
+      const selectedIndex = lists.findIndex((list) => list.name === selectedName);
+
+      if (selectedIndex === -1) {
+        alert('Choisis une liste existante à mettre à jour.');
+        return;
+      }
+
+      if (items.length === 0) {
+        alert('La source choisie ne contient aucun élément à sauvegarder.');
+        return;
+      }
+
+      const duplicateIndex = lists.findIndex((list) => list.name === targetName);
+      if (duplicateIndex !== -1 && duplicateIndex !== selectedIndex) {
+        alert('Une autre liste porte déjà ce nom.');
+        return;
+      }
+
+      lists[selectedIndex] = { name: targetName, items, updatedAt: new Date().toISOString() };
+      persistSavedLists(lists);
+      renderSavedLists(targetName);
+    }
+
+    function deleteSavedList() {
+      const selectedName = document.getElementById('saved-list-select').value;
+      if (!selectedName) {
+        return;
+      }
+
+      const lists = loadSavedLists().filter((list) => list.name !== selectedName);
+      persistSavedLists(lists);
+      document.getElementById('saved-list-name').value = '';
+      renderSavedLists();
+    }
+
+    function applySavedList(targetId) {
+      const selectedName = document.getElementById('saved-list-select').value;
+      const selected = loadSavedLists().find((list) => list.name === selectedName);
+
+      if (!selected) {
+        alert('Choisis d’abord une liste à réutiliser.');
+        return;
+      }
+
+      document.getElementById(targetId).value = selected.items.join('\n');
+      updateUI();
+    }
+
+    function renderStageDecor(mode, listA, listB) {
+      const orbit = document.getElementById('stageOrbit');
+      const primarySample = shuffle(listA).slice(0, mode === 'order' ? 4 : 6);
+
+      if (mode === 'match') {
+        const secondarySample = shuffle(listB).slice(0, 3);
+        const rows = primarySample.slice(0, 3).map((item, index) => `
+          <div class="match-row" style="--delay:${index * 90}ms;">
+            <span class="stage-chip">${escapeHTML(item)}</span>
+            <span class="match-arrow">↔</span>
+            <span class="stage-chip">${escapeHTML(secondarySample[index] || 'À lier')}</span>
+          </div>
+        `).join('');
+        orbit.innerHTML = rows || `
+          <div class="match-row">
+            <span class="stage-chip">Liste A</span>
+            <span class="match-arrow">↔</span>
+            <span class="stage-chip">Liste B</span>
+          </div>
+        `;
+        return;
+      }
+
+      if (primarySample.length === 0) {
+        orbit.innerHTML = `
+          <span class="stage-chip">Ajoute des éléments</span>
+          <span class="stage-chip">choisis un mode</span>
+          <span class="stage-chip">puis lance le tirage</span>
+        `;
+        return;
+      }
+
+      orbit.innerHTML = primarySample.map((item, index) => `
+        <span class="stage-chip" style="--delay:${index * 100}ms;">${escapeHTML(item)}</span>
+      `).join('');
+    }
+
+    function startDraw() {
+      const list1 = getCleanList('list1');
+      const list2 = getCleanList('list2');
+      const mode = document.getElementById('mode').value;
+      const slot = document.getElementById('slot');
+      const stage = document.getElementById('stage');
+      const resultsDiv = document.getElementById('results');
+      const drawButton = document.getElementById('draw-button');
+
+      if (list1.length === 0) {
+        alert('Veuillez entrer au moins un élément.');
+        return;
+      }
+
+      if (mode === 'match' && list2.length === 0) {
+        alert('Ajoute au moins un élément dans la liste B pour créer des associations.');
+        return;
+      }
+
+      clearInterval(drawInterval);
+      resultsDiv.innerHTML = '';
+      stage.dataset.state = 'spinning';
+      document.getElementById('stage-state').textContent = 'Animation en cours';
+      document.getElementById('stage-caption').textContent = 'Le tirage se lance… laisse la scène prendre vie avant la révélation.';
+      drawButton.disabled = true;
+
+      renderStageDecor(mode, list1, list2);
+
+      let counter = 0;
+      const maxCycles = mode === 'single' ? 28 : 22;
+
+      drawInterval = setInterval(() => {
+        slot.textContent = list1[Math.floor(Math.random() * list1.length)];
+        counter += 1;
+
+        if (counter >= maxCycles) {
+          clearInterval(drawInterval);
+          drawInterval = null;
+          processResults(list1, list2, mode);
+          drawButton.disabled = false;
+        }
+      }, 70);
+    }
+
+    function processResults(list, secondaryList, mode) {
+      const slot = document.getElementById('slot');
+      const resultsDiv = document.getElementById('results');
+      const stage = document.getElementById('stage');
+      const shuffled = shuffle(list);
+
+      if (window.confetti) {
+        window.confetti({ particleCount: 90, spread: 75, origin: { y: 0.62 } });
+      }
+
+      stage.dataset.state = 'revealed';
+      document.getElementById('stage-state').textContent = 'Résultat prêt';
+      renderStageDecor(mode, list, secondaryList);
+
+      if (mode === 'single') {
+        const count = Math.max(1, parseInt(document.getElementById('count').value, 10) || 1);
+        const winners = shuffled.slice(0, Math.min(count, shuffled.length));
+        slot.textContent = winners.length === 1 ? `🎉 ${winners[0]}` : '🎉 Gagnants révélés';
+        document.getElementById('stage-caption').textContent = winners.length === 1
+          ? 'Le gagnant ressort au centre, avec une animation douce et directe.'
+          : 'Les gagnants sont révélés dans une galerie claire, prête à être partagée.';
+
+        winners.forEach((winner, index) => {
+          appendResultCard(`Gagnant #${index + 1}`, winner, index);
+        });
+        return;
+      }
+
+      if (mode === 'order') {
+        slot.textContent = '📋 Ordre généré';
+        document.getElementById('stage-caption').textContent = 'Chaque rang s’anime dans l’ordre pour matérialiser le classement final.';
+        shuffled.forEach((item, index) => {
+          appendResultCard(`Rang #${index + 1}`, item, index);
+        });
+        return;
+      }
+
+      if (mode === 'pairs') {
+        slot.textContent = '👥 Binômes créés';
+        document.getElementById('stage-caption').textContent = 'Les binômes apparaissent par duo, avec un rythme visuel plus complice.';
+        for (let i = 0; i < shuffled.length; i += 2) {
+          const pair = shuffled.slice(i, i + 2);
+          const title = pair.length === 2 ? `Binôme #${Math.floor(i / 2) + 1}` : 'Élément seul';
+          appendResultCard(title, pair.join(' & '), Math.floor(i / 2));
+        }
+        return;
+      }
+
+      if (mode === 'teams') {
+        const rawTeamCount = parseInt(document.getElementById('team-count').value, 10) || 2;
+        const teamCount = Math.max(2, rawTeamCount);
+        const teams = Array.from({ length: teamCount }, () => []);
+
+        shuffled.forEach((item, index) => {
+          teams[index % teamCount].push(item);
+        });
+
+        slot.textContent = '🏆 Équipes réparties';
+        document.getElementById('stage-caption').textContent = 'Les membres rejoignent visuellement leur groupe pour un rendu net et équilibré.';
+        teams.forEach((team, index) => {
+          appendResultCard(`Équipe ${index + 1}`, team.length ? team.join(', ') : 'Aucun membre', index);
+        });
+        return;
+      }
+
+      if (mode === 'match') {
+        const list2 = shuffle(secondaryList);
+        slot.textContent = '🔗 Associations prêtes';
+        document.getElementById('stage-caption').textContent = 'Chaque entrée de la liste A se connecte à sa correspondance pour une lecture immédiate.';
+        shuffled.forEach((item, index) => {
+          const match = list2[index] || '---';
+          appendResultCard(item, `➡️ ${match}`, index);
+        });
+      }
+    }
+
+    function appendResultCard(title, value, index) {
+      const resultsDiv = document.getElementById('results');
+      const card = document.createElement('div');
+      const heading = document.createElement('h4');
+      const content = document.createElement('p');
+
+      card.className = 'result-box';
+      card.style.setProperty('--delay', `${index * 70}ms`);
+      heading.textContent = title;
+      content.textContent = value;
+
+      card.appendChild(heading);
+      card.appendChild(content);
+      resultsDiv.appendChild(card);
+    }
+
+    function escapeHTML(value) {
+      return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function installApp() {
+      if (!deferredInstallPrompt) {
+        alert('Utilise le menu de ton navigateur pour installer cette app si l’option n’apparaît pas automatiquement.');
+        return;
+      }
+
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+
+      if (choice.outcome === 'accepted') {
+        document.getElementById('install-button').classList.add('hidden');
+        document.getElementById('install-tip').textContent = 'Installation confirmée. Profite de l’app en mode standalone.';
+        return;
+      }
+
+      document.getElementById('install-tip').textContent = 'Installation annulée. Tu peux réessayer plus tard ou utiliser le menu du navigateur.';
+    }
+
+    function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) {
+        return;
+      }
+
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
       });
     }
-  }
-</script>
+
+    initApp();
+  </script>
 </body>
 </html>
