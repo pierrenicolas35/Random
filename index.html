@@ -207,7 +207,12 @@
       outline: none;
       transition: border-color 160ms ease;
     }
-    .options-row input[type="number"]:focus { border-color: var(--accent); }
+    .options-row .opts-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .options-row .opts-group.hidden { display: none !important; }
 
     /* save-flyout banner (shown after draw when list is ad-hoc) */
     .save-banner {
@@ -515,11 +520,11 @@
 
       <!-- options: count / team-count -->
       <div class="options-row">
-        <div id="single-opts" style="display:flex;gap:8px;align-items:center;">
+        <div id="single-opts" class="opts-group">
           <label for="count">Gagnants</label>
           <input type="number" id="count" value="1" min="1">
         </div>
-        <div id="teams-opts" class="hidden" style="display:none;gap:8px;align-items:center;">
+        <div id="teams-opts" class="opts-group hidden">
           <label for="team-count">Équipes</label>
           <input type="number" id="team-count" value="2" min="2">
         </div>
@@ -660,10 +665,8 @@
       document.querySelectorAll('.mode-tab').forEach(t =>
         t.classList.toggle('active', t.dataset.mode === mode));
       document.getElementById('stage-badge').textContent = MODE_META[mode].badge;
-      document.getElementById('single-opts').style.display   = mode === 'single' ? 'flex' : 'none';
-      const teamsEl = document.getElementById('teams-opts');
-      teamsEl.style.display = mode === 'teams' ? 'flex' : 'none';
-      teamsEl.classList.toggle('hidden', mode !== 'teams');
+      document.getElementById('single-opts').classList.toggle('hidden', mode !== 'single');
+      document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
       document.getElementById('list1-label').textContent =
         mode === 'match' ? 'Liste A (un par ligne)' : 'Éléments (un par ligne)';
       const showSecondary = mode === 'match';
@@ -841,16 +844,38 @@
     function renderModalSavedList() {
       const container = document.getElementById('modal-saved-list');
       const lists = loadSavedLists().sort((a,b) => a.name.localeCompare(b.name,'fr'));
+      container.innerHTML = '';
       if (lists.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem;">Aucune liste enregistrée.</p>';
+        const p = document.createElement('p');
+        p.style.cssText = 'color:var(--text-muted);font-size:0.88rem;';
+        p.textContent = 'Aucune liste enregistrée.';
+        container.appendChild(p);
         return;
       }
-      container.innerHTML = lists.map(l => `
-        <div class="saved-item${selectedModalList===l.name?' selected':''}" onclick="selectModalList('${escapeHTML(l.name)}')">
-          <span class="saved-item-name">${escapeHTML(l.name)}</span>
-          <span class="saved-item-count">${l.items.length} éléments</span>
-          <button class="saved-item-del" onclick="deleteList(event,'${escapeHTML(l.name)}')" title="Supprimer">✕</button>
-        </div>`).join('');
+      lists.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'saved-item' + (selectedModalList === l.name ? ' selected' : '');
+        row.addEventListener('click', () => selectModalList(l.name));
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'saved-item-name';
+        nameSpan.textContent = l.name;
+
+        const countSpan = document.createElement('span');
+        countSpan.className = 'saved-item-count';
+        countSpan.textContent = `${l.items.length} éléments`;
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'saved-item-del';
+        delBtn.title = 'Supprimer';
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', e => { e.stopPropagation(); deleteList(l.name); });
+
+        row.appendChild(nameSpan);
+        row.appendChild(countSpan);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+      });
     }
 
     function selectModalList(name) {
@@ -892,8 +917,7 @@
       renderSavedSelectInHeader();
     }
 
-    function deleteList(e, name) {
-      e.stopPropagation();
+    function deleteList(name) {
       if (!confirm(`Supprimer la liste "${name}" ?`)) return;
       const lists = loadSavedLists().filter(l => l.name !== name);
       persistSavedLists(lists);
