@@ -5,7 +5,9 @@ const APP_SHELL = [
   './manifest.json',
   './icons/random-icon.svg',
   './icons/random-icon-192.svg',
-  './icons/random-icon-512.svg'
+  './icons/random-icon-512.svg',
+  './icons/random-icon-192.png',
+  './icons/random-icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -31,35 +33,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const networkResponsePromise = fetch(event.request)
+    .then((response) => {
+      if (response.ok && event.request.url.startsWith(self.location.origin)) {
+        const clonedResponse = response.clone();
+        return caches.open(CACHE_NAME)
+          .then((cache) => cache.put(event.request, clonedResponse))
+          .then(() => response);
+      }
+
+      return response;
+    })
+    .catch(() => null);
+
+  event.waitUntil(networkResponsePromise.then(() => undefined));
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const networkResponse = fetch(event.request)
-        .then((response) => {
-          if (response.ok && event.request.url.startsWith(self.location.origin)) {
-            const clonedResponse = response.clone();
-            event.waitUntil(
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clonedResponse))
-            );
-          }
-          return response;
-        })
-        .catch(async () => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
+      if (cachedResponse) {
+        return cachedResponse;
+      }
 
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
+      return networkResponsePromise.then((networkResponse) => {
+        if (networkResponse) {
+          return networkResponse;
+        }
 
-          return new Response('Hors ligne', {
-            status: 503,
-            statusText: 'Offline',
-            headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
-          });
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+
+        return new Response('Hors ligne', {
+          status: 503,
+          statusText: 'Offline',
+          headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
         });
-
-      return cachedResponse || networkResponse;
+      });
     })
   );
 });
