@@ -490,9 +490,9 @@
         <button class="mode-tab"        data-mode="match"   onclick="setMode('match')"  >Association A→B</button>
       </div>
 
-      <!-- source chips: saved list or ad-hoc -->
+      <!-- source chips: saved list or ad-hoc (liste A) -->
       <div class="list-source-row">
-        <label>Source :</label>
+        <label id="src-a-label">Source :</label>
         <div class="source-chips">
           <button class="source-chip active" id="src-adhoc"  onclick="selectSource('adhoc')">Saisie libre</button>
           <button class="source-chip"        id="src-saved"  onclick="selectSource('saved')">Liste enregistrée</button>
@@ -513,9 +513,25 @@
       </div>
 
       <!-- list B textarea (match mode only) -->
-      <div id="secondary-area" class="textarea-wrap hidden">
-        <label for="list2">Liste B (un par ligne)</label>
-        <textarea id="list2" placeholder="Valeur 1&#10;Valeur 2&#10;Valeur 3"></textarea>
+      <div id="secondary-area" class="hidden">
+        <!-- list B source chips -->
+        <div class="list-source-row">
+          <label>Liste B :</label>
+          <div class="source-chips">
+            <button class="source-chip active" id="src-b-adhoc"  onclick="selectSourceB('adhoc')">Saisie libre</button>
+            <button class="source-chip"        id="src-b-saved"  onclick="selectSourceB('saved')">Liste enregistrée</button>
+          </div>
+        </div>
+        <!-- saved list picker for B -->
+        <div id="saved-picker-b" class="hidden">
+          <select id="saved-list-select-b" onchange="onSavedListPickB()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-strong);color:var(--text);font-size:0.95rem;outline:none;font-family:inherit;">
+            <option value="">Choisir une liste enregistrée…</option>
+          </select>
+        </div>
+        <div id="adhoc-area-b" class="textarea-wrap">
+          <label for="list2">Liste B (un par ligne)</label>
+          <textarea id="list2" placeholder="Valeur 1&#10;Valeur 2&#10;Valeur 3"></textarea>
+        </div>
       </div>
 
       <!-- options: count / team-count -->
@@ -623,7 +639,8 @@
 
     let drawInterval = null;
     let deferredInstallPrompt = null;
-    let currentSource = 'adhoc';       // 'adhoc' | 'saved'
+    let currentSource = 'adhoc';       // 'adhoc' | 'saved'  (liste A)
+    let currentSourceB = 'adhoc';      // 'adhoc' | 'saved'  (liste B)
     let selectedModalList = null;      // name of selected list in modal
 
     /* ── storage ── */
@@ -667,12 +684,13 @@
       document.getElementById('stage-badge').textContent = MODE_META[mode].badge;
       document.getElementById('single-opts').classList.toggle('hidden', mode !== 'single');
       document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
+      const isMatch = mode === 'match';
       document.getElementById('list1-label').textContent =
-        mode === 'match' ? 'Liste A (un par ligne)' : 'Éléments (un par ligne)';
-      const showSecondary = mode === 'match';
-      document.getElementById('secondary-area').classList.toggle('hidden', !showSecondary);
+        isMatch ? 'Liste A (un par ligne)' : 'Éléments (un par ligne)';
+      document.getElementById('src-a-label').textContent = isMatch ? 'Liste A :' : 'Source :';
+      document.getElementById('secondary-area').classList.toggle('hidden', !isMatch);
       if (document.getElementById('stage').dataset.state !== 'spinning') {
-        renderStageDecor(mode, getListForDraw(), getCleanList('list2'));
+        renderStageDecor(mode, getListForDraw(), getListBForDraw());
       }
     }
 
@@ -688,9 +706,20 @@
       }
     }
 
+    function selectSourceB(src) {
+      currentSourceB = src;
+      document.getElementById('src-b-adhoc').classList.toggle('active', src === 'adhoc');
+      document.getElementById('src-b-saved').classList.toggle('active', src === 'saved');
+      document.getElementById('saved-picker-b').classList.toggle('hidden', src !== 'saved');
+      document.getElementById('adhoc-area-b').classList.toggle('hidden', src !== 'adhoc');
+      if (src === 'saved') {
+        renderSavedSelectB();
+      }
+    }
+
     function renderSavedSelectInHeader() {
       const sel = document.getElementById('saved-list-select');
-      const lists = loadSavedLists().sort((a,b) => a.name.localeCompare(b.name,'fr'));
+      const lists = loadSavedLists().sort((x,y) => x.name.localeCompare(y.name,'fr'));
       sel.innerHTML = '<option value="">Choisir une liste enregistrée…</option>';
       lists.forEach(l => {
         const o = document.createElement('option');
@@ -700,9 +729,31 @@
       });
     }
 
+    function renderSavedSelectB() {
+      const sel = document.getElementById('saved-list-select-b');
+      const lists = loadSavedLists().sort((x,y) => x.name.localeCompare(y.name,'fr'));
+      sel.innerHTML = '<option value="">Choisir une liste enregistrée…</option>';
+      lists.forEach(l => {
+        const o = document.createElement('option');
+        o.value = l.name;
+        o.textContent = `${l.name} (${l.items.length})`;
+        sel.appendChild(o);
+      });
+    }
+
+    function renderAllSavedSelects() {
+      renderSavedSelectInHeader();
+      renderSavedSelectB();
+    }
+
     function onSavedListPick() {
       const mode = document.body.dataset.mode || 'single';
-      renderStageDecor(mode, getListForDraw(), getCleanList('list2'));
+      renderStageDecor(mode, getListForDraw(), getListBForDraw());
+    }
+
+    function onSavedListPickB() {
+      const mode = document.body.dataset.mode || 'single';
+      renderStageDecor(mode, getListForDraw(), getListBForDraw());
     }
 
     function getListForDraw() {
@@ -712,6 +763,15 @@
         return found ? found.items : [];
       }
       return getCleanList('list1');
+    }
+
+    function getListBForDraw() {
+      if (currentSourceB === 'saved') {
+        const name = document.getElementById('saved-list-select-b').value;
+        const found = loadSavedLists().find(l => l.name === name);
+        return found ? found.items : [];
+      }
+      return getCleanList('list2');
     }
 
     /* ── stage decor ── */
@@ -738,7 +798,7 @@
     function startDraw() {
       const mode = document.body.dataset.mode || 'single';
       const list1 = getListForDraw();
-      const list2 = getCleanList('list2');
+      const list2 = getListBForDraw();
 
       if (list1.length === 0) { alert('Ajoute au moins un élément.'); return; }
       if (mode === 'match' && list2.length === 0) { alert('Ajoute des éléments dans la liste B.'); return; }
@@ -900,7 +960,7 @@
       document.getElementById('new-list-name').value = '';
       document.getElementById('new-list-items').value = '';
       renderModalSavedList();
-      renderSavedSelectInHeader();
+      renderAllSavedSelects();
     }
 
     function updateSelectedList() {
@@ -914,7 +974,7 @@
       lists[idx].updatedAt = new Date().toISOString();
       persistSavedLists(lists);
       renderModalSavedList();
-      renderSavedSelectInHeader();
+      renderAllSavedSelects();
     }
 
     function deleteList(name) {
@@ -926,7 +986,7 @@
         document.getElementById('edit-section').classList.add('hidden');
       }
       renderModalSavedList();
-      renderSavedSelectInHeader();
+      renderAllSavedSelects();
     }
 
     /* ── quick save (from save banner) ── */
@@ -948,7 +1008,7 @@
       if (lists.some(l => l.name === name)) { alert('Une liste avec ce nom existe déjà.'); return; }
       lists.push({ name, items, updatedAt: new Date().toISOString() });
       persistSavedLists(lists);
-      renderSavedSelectInHeader();
+      renderAllSavedSelects();
       document.getElementById('quick-save-name').value = '';
       closeSaveModal();
       document.getElementById('save-banner').classList.add('hidden');
@@ -974,14 +1034,14 @@
     /* ── init ── */
     function initApp() {
       setMode('single');
-      renderSavedSelectInHeader();
+      renderAllSavedSelects();
       renderStageDecor('single', [], []);
       registerServiceWorker();
 
       document.getElementById('list1').addEventListener('input', () => {
         const mode = document.body.dataset.mode || 'single';
         if (document.getElementById('stage').dataset.state !== 'spinning') {
-          renderStageDecor(mode, getCleanList('list1'), getCleanList('list2'));
+          renderStageDecor(mode, getCleanList('list1'), getListBForDraw());
         }
         document.getElementById('save-banner').classList.add('hidden');
       });
