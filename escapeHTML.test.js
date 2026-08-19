@@ -1,7 +1,8 @@
 const fs = require('fs');
+const path = require('path');
 
-const html = fs.readFileSync('./index.html', 'utf-8');
-const match = html.match(/function escapeHTML\(v\) \{[\s\S]*?\}/);
+const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+const match = html.match(/function\s+escapeHTML\s*\([^)]*\)\s*\{[\s\S]*?\}/);
 
 if (!match) {
     throw new Error('escapeHTML function not found in index.html');
