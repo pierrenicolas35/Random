@@ -1213,7 +1213,7 @@
           });
         }
       } else if (mode === 'teams') {
-        const tc = Math.max(2, parseInt(document.getElementById('team-count').value, 10) || 2);
+        const tc = Math.min(100, Math.max(2, parseInt(document.getElementById('team-count').value, 10) || 2));
         const teams = Array.from({ length: tc }, () => []);
         shuffled.forEach((item, i) => teams[i % tc].push(item));
         teams.forEach((t, i) => res.push({ title: `Équipe ${i + 1}`, value: t.join(', ') || '—' }));
