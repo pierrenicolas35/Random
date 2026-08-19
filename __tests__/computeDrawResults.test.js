@@ -5,34 +5,48 @@
 const fs = require('fs');
 const path = require('path');
 
-beforeEach(() => {
-  const html = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
-  document.body.innerHTML = html;
+// Extract shuffle and computeDrawResults once from the raw HTML source,
+// avoiding running the full page scripts (which use const declarations that
+// cannot be re-declared across beforeEach calls in the same JSDOM environment).
+const html = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
 
-  // Extract the function from the script content
-  const scripts = Array.from(document.querySelectorAll('script'));
-  let functionCode = null;
-  for (const script of scripts) {
-    if (script.textContent.includes('function computeDrawResults')) {
-      const match = script.textContent.match(/function computeDrawResults\s*\([^)]*\)\s*\{[\s\S]*?(?=function \w+\s*\(|$)/);
-      if (match) {
-        functionCode = match[0];
+// Grab the raw text of every <script>...</script> block via regex
+const scriptTexts = [];
+const scriptTagRe = /<script(?:[^>]*)>([\s\S]*?)<\/script>/gi;
+let scriptTagMatch;
+while ((scriptTagMatch = scriptTagRe.exec(html)) !== null) {
+  scriptTexts.push(scriptTagMatch[1]);
+}
 
-        // We also need the shuffle function
-        const shuffleMatch = script.textContent.match(/function shuffle\s*\([^)]*\)\s*\{[\s\S]*?(?=function \w+\s*\(|$)/);
-        if (shuffleMatch) {
-            functionCode = shuffleMatch[0] + '\n\n' + functionCode;
-        }
-        break;
-      }
-    }
+let shuffleCode = null;
+let functionCode = null;
+for (const text of scriptTexts) {
+  if (text.includes('function computeDrawResults')) {
+    const shuffleMatch = text.match(/function shuffle\s*\([^)]*\)\s*\{[\s\S]*?(?=\n\s*function \w+\s*\()/);
+    const fnMatch = text.match(/function computeDrawResults\s*\([^)]*\)\s*\{[\s\S]*?(?=\n\s*function \w+\s*\()/);
+    if (shuffleMatch) shuffleCode = shuffleMatch[0];
+    if (fnMatch) functionCode = fnMatch[0];
+    break;
   }
+}
 
-  // Evaluate the function in the window scope so it has access to document
-  // In jest jsdom, we can execute script element instead
-  const testScript = document.createElement('script');
-  testScript.textContent = functionCode + '\nwindow.testComputeDrawResults = computeDrawResults;';
-  document.body.appendChild(testScript);
+if (!functionCode) {
+  throw new Error('computeDrawResults not found in index.html');
+}
+if (!shuffleCode) {
+  throw new Error('shuffle not found in index.html');
+}
+
+// Make both functions available on the window/global scope for all tests
+// eslint-disable-next-line no-eval
+eval(shuffleCode + '\n\n' + functionCode + '\nwindow.testComputeDrawResults = computeDrawResults;');
+
+beforeEach(() => {
+  // Set up only the minimal DOM elements that computeDrawResults reads
+  document.body.innerHTML = `
+    <input id="count" type="number" value="" />
+    <input id="team-count" type="number" value="" />
+  `;
 });
 
 describe('computeDrawResults', () => {
@@ -58,6 +72,19 @@ describe('computeDrawResults', () => {
       document.getElementById('count').value = '5';
       const results = window.testComputeDrawResults(['A', 'B'], [], 'single');
       expect(results).toHaveLength(2);
+    });
+
+    test('returns empty array for an empty list', () => {
+      document.getElementById('count').value = '2';
+      const results = window.testComputeDrawResults([], [], 'single');
+      expect(results).toHaveLength(0);
+    });
+
+    test('returns 1 winner when count is non-positive', () => {
+      document.getElementById('count').value = '0';
+      const results = window.testComputeDrawResults(['A', 'B', 'C'], [], 'single');
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe('Gagnant #1');
     });
   });
 
