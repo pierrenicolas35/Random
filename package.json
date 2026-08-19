@@ -1,25 +1,20 @@
 {
-  "name": "app",
+  "name": "random-draw",
   "version": "1.0.0",
-  "description": "",
-  "main": "service-worker.js",
+  "description": "Random draw progressive web app",
+  "main": "index.js",
   "scripts": {
     "test": "jest"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pierrenicolas35/Random.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/pierrenicolas35/Random/issues"
-  },
-  "homepage": "https://github.com/pierrenicolas35/Random#readme",
   "devDependencies": {
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1"
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "jsdom": "^22.1.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFiles": [
+      "<rootDir>/setupJest.js"
+    ]
   }
 }
