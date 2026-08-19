@@ -1,0 +1,20 @@
+{
+  "name": "random-draw",
+  "version": "1.0.0",
+  "description": "Random draw progressive web app",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "jsdom": "^22.1.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFiles": [
+      "<rootDir>/setupJest.js"
+    ]
+  }
+}
