@@ -122,11 +122,34 @@
       border-color: transparent;
     }
 
+    /* lists wrapper and uniform card panels */
+    .lists-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }
+    .list-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 12px;
+      min-height: 0;
+      transition: all 200ms ease;
+    }
+    .list-card.hidden { display: none !important; }
+
     /* list source selector */
     .list-source-row {
       display: flex;
       gap: 8px;
       align-items: center;
+      flex-shrink: 0;
     }
     .list-source-row label {
       font-size: 0.82rem;
@@ -140,12 +163,12 @@
       flex-wrap: wrap;
     }
     .source-chip {
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 999px;
       border: 1px solid var(--border);
-      background: var(--surface);
+      background: var(--surface-strong);
       color: var(--text-muted);
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
       transition: all 140ms ease;
@@ -173,15 +196,17 @@
       flex: 1;
       width: 100%;
       border: 1px solid var(--border);
-      border-radius: var(--r-lg);
+      border-radius: var(--r-sm);
       background: var(--surface-strong);
       color: var(--text);
-      padding: 12px 14px;
-      font-size: 0.95rem;
-      line-height: 1.55;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      line-height: 1.5;
       outline: none;
       resize: none;
+      min-height: 70px;
       transition: border-color 160ms ease, box-shadow 160ms ease;
+      font-family: inherit;
     }
     .textarea-wrap textarea:focus {
       border-color: var(--accent);
@@ -448,6 +473,153 @@
     .save-inline { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
     .save-inline .field { flex:1; min-width:160px; }
 
+    /* ── DRAW ANIMATION POPUP MODAL ───────────────────────── */
+    .draw-popup-overlay {
+      position: fixed; inset: 0;
+      background: rgba(18, 12, 32, 0.72);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .draw-popup-overlay.open { opacity: 1; pointer-events: all; }
+    .draw-popup-dialog {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface-strong);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: var(--r-xl);
+      box-shadow: 0 24px 60px rgba(18, 12, 32, 0.35);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.92) translateY(20px);
+      transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .draw-popup-overlay.open .draw-popup-dialog { transform: scale(1) translateY(0); }
+
+    .draw-popup-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .draw-popup-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .draw-popup-stage {
+      width: 100%;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 10px 0;
+    }
+
+    /* Wheel canvas container */
+    .wheel-wrapper {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wheel-pointer {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 24px solid var(--danger);
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+      z-index: 10;
+    }
+    canvas#wheelCanvas {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    }
+
+    /* Animated shuffle / slots / cards stage */
+    .animation-stage-box {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .pop-reel {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent);
+      padding: 18px 24px;
+      border-radius: var(--r-lg);
+      background: var(--surface-muted);
+      border: 2px dashed var(--accent);
+      min-width: 240px;
+      text-align: center;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Popup final results grid */
+    .popup-results-grid {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .popup-result-card {
+      padding: 12px 16px;
+      border-radius: var(--r-lg);
+      background: rgba(255,255,255,0.95);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      animation: reveal-up 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .popup-result-card h5 {
+      color: var(--accent);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+      font-weight: 800;
+    }
+    .popup-result-card p {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .draw-popup-actions {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+    }
+
     .hidden { display:none !important; }
 
     /* ── ANIMATIONS ──────────────────────────────────────── */
@@ -490,47 +662,50 @@
         <button class="mode-tab"        data-mode="match"   onclick="setMode('match')"  >Association A→B</button>
       </div>
 
-      <!-- source chips: saved list or ad-hoc (liste A) -->
-      <div class="list-source-row">
-        <label id="src-a-label">Source :</label>
-        <div class="source-chips">
-          <button class="source-chip active" id="src-adhoc"  onclick="selectSource('adhoc')">Saisie libre</button>
-          <button class="source-chip"        id="src-saved"  onclick="selectSource('saved')">Liste enregistrée</button>
-        </div>
-      </div>
+      <!-- Lists container with identical styling for List A and List B -->
+      <div class="lists-wrapper">
+        <!-- List A Card -->
+        <div class="list-card" id="primary-list-card">
+          <div class="list-source-row">
+            <label id="src-a-label">Source :</label>
+            <div class="source-chips">
+              <button class="source-chip active" id="src-adhoc" onclick="selectSource('adhoc')">Saisie libre</button>
+              <button class="source-chip" id="src-saved" onclick="selectSource('saved')">Liste enregistrée</button>
+            </div>
+          </div>
 
-      <!-- saved list picker (shown when source = saved) -->
-      <div id="saved-picker" class="hidden">
-        <select id="saved-list-select" onchange="onSavedListPick()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-strong);color:var(--text);font-size:0.95rem;outline:none;font-family:inherit;">
-          <option value="">Choisir une liste enregistrée…</option>
-        </select>
-      </div>
+          <div id="saved-picker" class="hidden">
+            <select id="saved-list-select" onchange="onSavedListPick()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-strong);color:var(--text);font-size:0.9rem;outline:none;font-family:inherit;">
+              <option value="">Choisir une liste enregistrée…</option>
+            </select>
+          </div>
 
-      <!-- list A textarea -->
-      <div id="adhoc-area" class="textarea-wrap">
-        <label id="list1-label" for="list1">Éléments (un par ligne)</label>
-        <textarea id="list1" placeholder="Élément 1&#10;Élément 2&#10;Élément 3"></textarea>
-      </div>
-
-      <!-- list B textarea (match mode only) -->
-      <div id="secondary-area" class="hidden">
-        <!-- list B source chips -->
-        <div class="list-source-row">
-          <label>Liste B :</label>
-          <div class="source-chips">
-            <button class="source-chip active" id="src-b-adhoc"  onclick="selectSourceB('adhoc')">Saisie libre</button>
-            <button class="source-chip"        id="src-b-saved"  onclick="selectSourceB('saved')">Liste enregistrée</button>
+          <div id="adhoc-area" class="textarea-wrap">
+            <label id="list1-label" for="list1">Éléments (un par ligne)</label>
+            <textarea id="list1" placeholder="Élément 1&#10;Élément 2&#10;Élément 3"></textarea>
           </div>
         </div>
-        <!-- saved list picker for B -->
-        <div id="saved-picker-b" class="hidden">
-          <select id="saved-list-select-b" onchange="onSavedListPickB()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-strong);color:var(--text);font-size:0.95rem;outline:none;font-family:inherit;">
-            <option value="">Choisir une liste enregistrée…</option>
-          </select>
-        </div>
-        <div id="adhoc-area-b" class="textarea-wrap">
-          <label for="list2">Liste B (un par ligne)</label>
-          <textarea id="list2" placeholder="Valeur 1&#10;Valeur 2&#10;Valeur 3"></textarea>
+
+        <!-- List B Card (match mode only) -->
+        <div class="list-card hidden" id="secondary-area">
+          <div class="list-source-row">
+            <label id="src-b-label">Liste B :</label>
+            <div class="source-chips">
+              <button class="source-chip active" id="src-b-adhoc" onclick="selectSourceB('adhoc')">Saisie libre</button>
+              <button class="source-chip" id="src-b-saved" onclick="selectSourceB('saved')">Liste enregistrée</button>
+            </div>
+          </div>
+
+          <div id="saved-picker-b" class="hidden">
+            <select id="saved-list-select-b" onchange="onSavedListPickB()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-strong);color:var(--text);font-size:0.9rem;outline:none;font-family:inherit;">
+              <option value="">Choisir une liste enregistrée…</option>
+            </select>
+          </div>
+
+          <div id="adhoc-area-b" class="textarea-wrap">
+            <label for="list2" id="list2-label">Éléments Liste B (un par ligne)</label>
+            <textarea id="list2" placeholder="Valeur 1&#10;Valeur 2&#10;Valeur 3"></textarea>
+          </div>
         </div>
       </div>
 
@@ -609,6 +784,37 @@
     </div>
   </div>
 
+  <!-- ══ POPUP MODAL : Tirage au sort en direct ══════════════ -->
+  <div id="draw-popup-modal" class="draw-popup-overlay" role="dialog" aria-modal="true" aria-label="Tirage au sort en cours">
+    <div class="draw-popup-dialog">
+      <div class="draw-popup-header">
+        <span class="draw-popup-title" id="pop-title">🎰 Tirage au Sort</span>
+        <button class="icon-btn" onclick="closeDrawPopup()" title="Fermer">✕</button>
+      </div>
+
+      <div class="draw-popup-stage" id="pop-stage">
+        <!-- Wheel View (Single Winner = 1) -->
+        <div id="pop-wheel-container" class="wheel-wrapper hidden">
+          <div class="wheel-pointer"></div>
+          <canvas id="wheelCanvas" width="560" height="560"></canvas>
+        </div>
+
+        <!-- Reel / Cards / Shuffle View -->
+        <div id="pop-anim-container" class="animation-stage-box">
+          <div id="pop-reel" class="pop-reel">🎰 Melange en cours...</div>
+        </div>
+
+        <!-- Final Results Grid -->
+        <div id="pop-results-container" class="popup-results-grid hidden"></div>
+      </div>
+
+      <div class="draw-popup-actions">
+        <button class="btn btn-primary hidden" id="pop-relaunch-btn" onclick="startDraw()">Recommencer 🎲</button>
+        <button class="btn btn-secondary" id="pop-close-btn" onclick="closeDrawPopup()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ MODAL : sauvegarder liste à la volée ═════════════════ -->
   <div id="save-modal" class="modal-overlay" onclick="closeSaveModalOnBg(event)">
     <div class="modal" role="dialog" aria-modal="true" aria-label="Sauvegarder la liste">
@@ -638,10 +844,126 @@
     };
 
     let drawInterval = null;
+    let wheelAnimFrame = null;
     let deferredInstallPrompt = null;
     let currentSource = 'adhoc';       // 'adhoc' | 'saved'  (liste A)
     let currentSourceB = 'adhoc';      // 'adhoc' | 'saved'  (liste B)
     let selectedModalList = null;      // name of selected list in modal
+
+    const WHEEL_COLORS = [
+      '#6750a4', '#7f67be', '#006782', '#2886a3', '#2f6f4f',
+      '#4a8b67', '#7a5600', '#9a7110', '#8f4c38', '#b2684f',
+      '#3b52a4', '#d946ef', '#059669', '#d97706', '#dc2626'
+    ];
+
+    function openDrawPopup(titleText) {
+      document.getElementById('pop-title').textContent = titleText || '🎰 Tirage au Sort';
+      document.getElementById('pop-relaunch-btn').classList.add('hidden');
+      document.getElementById('pop-results-container').classList.add('hidden');
+      document.getElementById('pop-results-container').innerHTML = '';
+      document.getElementById('draw-popup-modal').classList.add('open');
+    }
+
+    function closeDrawPopup() {
+      if (drawInterval) { clearInterval(drawInterval); drawInterval = null; }
+      if (wheelAnimFrame) { cancelAnimationFrame(wheelAnimFrame); wheelAnimFrame = null; }
+      document.getElementById('draw-popup-modal').classList.remove('open');
+      const btn = document.getElementById('draw-button');
+      if (btn) btn.disabled = false;
+    }
+
+    function drawWheel(canvas, items, angle) {
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = width / 2 - 10;
+      const n = items.length;
+      const sliceAngle = (2 * Math.PI) / n;
+
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < n; i++) {
+        const start = angle + i * sliceAngle;
+        const end = start + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        /* Slice label */
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(start + sliceAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px Inter, sans-serif';
+        const label = items[i].length > 14 ? items[i].substring(0, 12) + '…' : items[i];
+        ctx.fillText(label, radius - 24, 6);
+        ctx.restore();
+      }
+
+      /* Center peg */
+      ctx.beginPath();
+      ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(103,80,164,0.3)';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, 2 * Math.PI);
+      ctx.fillStyle = 'var(--accent, #6750a4)';
+      ctx.fill();
+    }
+
+    function runWheelAnimation(items, winnerIndex, onComplete) {
+      const canvas = document.getElementById('wheelCanvas');
+      const n = items.length;
+      const sliceAngle = (2 * Math.PI) / n;
+
+      /* Target angle so winner slice aligns under top pointer (270deg / -90deg / 1.5 * PI) */
+      const targetSliceCenter = winnerIndex * sliceAngle + sliceAngle / 2;
+      const topPointerAngle = (3 * Math.PI) / 2;
+      const finalBaseAngle = topPointerAngle - targetSliceCenter;
+
+      const extraRounds = 5 + Math.floor(Math.random() * 2); // 5-6 full spins
+      const totalRotation = extraRounds * 2 * Math.PI + (finalBaseAngle % (2 * Math.PI));
+
+      let startAngle = 0;
+      let startTime = null;
+      const duration = 2200; // ms
+
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        /* Cubic ease out for wheel slowdown */
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentAngle = startAngle + totalRotation * easeOut;
+
+        drawWheel(canvas, items, currentAngle);
+
+        if (progress < 1) {
+          wheelAnimFrame = requestAnimationFrame(animate);
+        } else {
+          wheelAnimFrame = null;
+          if (onComplete) onComplete();
+        }
+      }
+
+      if (wheelAnimFrame) cancelAnimationFrame(wheelAnimFrame);
+      wheelAnimFrame = requestAnimationFrame(animate);
+    }
 
     /* ── storage ── */
     function loadSavedLists() {
@@ -686,7 +1008,7 @@
       document.getElementById('teams-opts').classList.toggle('hidden', mode !== 'teams');
       const isMatch = mode === 'match';
       document.getElementById('list1-label').textContent =
-        isMatch ? 'Liste A (un par ligne)' : 'Éléments (un par ligne)';
+        isMatch ? 'Éléments Liste A (un par ligne)' : 'Éléments (un par ligne)';
       document.getElementById('src-a-label').textContent = isMatch ? 'Liste A :' : 'Source :';
       document.getElementById('secondary-area').classList.toggle('hidden', !isMatch);
       if (document.getElementById('stage').dataset.state !== 'spinning') {
@@ -803,79 +1125,144 @@
       if (list1.length === 0) { alert('Ajoute au moins un élément.'); return; }
       if (mode === 'match' && list2.length === 0) { alert('Ajoute des éléments dans la liste B.'); return; }
 
-      clearInterval(drawInterval);
-      const stage = document.getElementById('stage');
-      const slot  = document.getElementById('slot');
-      const btn   = document.getElementById('draw-button');
-      const results = document.getElementById('results');
+      const count = Math.max(1, parseInt(document.getElementById('count').value, 10) || 1);
+      const isSingleWheel = (mode === 'single' && count === 1);
 
+      /* Prepare stage & button */
+      const stage = document.getElementById('stage');
+      const slot = document.getElementById('slot');
+      const btn = document.getElementById('draw-button');
+      const results = document.getElementById('results');
       results.innerHTML = '';
       stage.dataset.state = 'spinning';
       document.getElementById('stage-state').textContent = 'En cours…';
-      slot.textContent = list1[0];
       btn.disabled = true;
 
+      /* Open Popup Dialog */
+      openDrawPopup(MODE_META[mode] ? MODE_META[mode].badge : 'Tirage');
+
+      const wheelContainer = document.getElementById('pop-wheel-container');
+      const animContainer = document.getElementById('pop-anim-container');
+      const reelEl = document.getElementById('pop-reel');
+      const popResultsGrid = document.getElementById('pop-results-container');
+
+      if (isSingleWheel) {
+        wheelContainer.classList.remove('hidden');
+        animContainer.classList.add('hidden');
+
+        const shuffled = shuffle(list1);
+        const winner = shuffled[0];
+        const winnerIndex = list1.indexOf(winner);
+
+        runWheelAnimation(list1, winnerIndex, () => {
+          finishDrawResults(list1, list2, mode, [{ title: 'Gagnant', value: `🎉 ${winner}` }]);
+        });
+      } else {
+        wheelContainer.classList.add('hidden');
+        animContainer.classList.remove('hidden');
+
+        let counter = 0;
+        const modeLabels = {
+          single: '🎲 Tirage des gagnants...',
+          pairs: '👥 Formation des binômes...',
+          teams: '🏆 Constitution des équipes...',
+          order: '📋 Mélange de l\'ordre...',
+          match: '🔗 Association des listes A ↔ B...'
+        };
+
+        if (drawInterval) clearInterval(drawInterval);
+        drawInterval = setInterval(() => {
+          const randItem1 = list1[Math.floor(Math.random() * list1.length)];
+          if (mode === 'match' && list2.length) {
+            const randItem2 = list2[Math.floor(Math.random() * list2.length)];
+            reelEl.innerHTML = `🔀 <strong>${escapeHTML(randItem1)}</strong> ↔ <strong>${escapeHTML(randItem2)}</strong>`;
+          } else {
+            reelEl.innerHTML = `🎲 <strong>${escapeHTML(randItem1)}</strong>`;
+          }
+
+          if (++counter >= 22) {
+            clearInterval(drawInterval); drawInterval = null;
+
+            /* Build final results array */
+            const computedResults = computeDrawResults(list1, list2, mode);
+            finishDrawResults(list1, list2, mode, computedResults);
+          }
+        }, 80);
+      }
+    }
+
+    function computeDrawResults(list, list2, mode) {
+      const shuffled = shuffle(list);
+      const res = [];
+
+      if (mode === 'single') {
+        const count = Math.max(1, parseInt(document.getElementById('count').value, 10) || 1);
+        const winners = shuffled.slice(0, Math.min(count, shuffled.length));
+        winners.forEach((w, i) => res.push({ title: `Gagnant #${i + 1}`, value: w }));
+      } else if (mode === 'order') {
+        shuffled.forEach((item, i) => res.push({ title: `Rang #${i + 1}`, value: item }));
+      } else if (mode === 'pairs') {
+        for (let i = 0; i < shuffled.length; i += 2) {
+          const pair = shuffled.slice(i, i + 2);
+          res.push({
+            title: pair.length === 2 ? `Binôme #${i / 2 + 1}` : 'Seul',
+            value: pair.join(' & ')
+          });
+        }
+      } else if (mode === 'teams') {
+        const tc = Math.max(2, parseInt(document.getElementById('team-count').value, 10) || 2);
+        const teams = Array.from({ length: tc }, () => []);
+        shuffled.forEach((item, i) => teams[i % tc].push(item));
+        teams.forEach((t, i) => res.push({ title: `Équipe ${i + 1}`, value: t.join(', ') || '—' }));
+      } else if (mode === 'match') {
+        const shuffled2 = shuffle(list2);
+        shuffled.forEach((item, i) => res.push({ title: item, value: `➡️ ${shuffled2[i] || '—'}` }));
+      }
+      return res;
+    }
+
+    function finishDrawResults(list1, list2, mode, computedResults) {
+      const stage = document.getElementById('stage');
+      const slot = document.getElementById('slot');
+      const btn = document.getElementById('draw-button');
+      const results = document.getElementById('results');
+      const popResultsGrid = document.getElementById('pop-results-container');
+
+      if (window.confetti) window.confetti({ particleCount: 90, spread: 80, origin: { y: 0.5 } });
+
+      stage.dataset.state = 'revealed';
+      document.getElementById('stage-state').textContent = 'Résultat';
       renderStageDecor(mode, list1, list2);
 
-      let counter = 0;
-      const maxCycles = mode === 'single' ? 28 : 22;
-      drawInterval = setInterval(() => {
-        slot.textContent = list1[Math.floor(Math.random() * list1.length)];
-        if (++counter >= maxCycles) {
-          clearInterval(drawInterval); drawInterval = null;
-          processResults(list1, list2, mode);
-          btn.disabled = false;
-          if (currentSource === 'adhoc') {
-            document.getElementById('save-banner').classList.remove('hidden');
-          }
-        }
-      }, 70);
+      slot.textContent = computedResults[0] ? computedResults[0].value : 'Résultat';
+
+      /* Populate right panel stage results */
+      results.innerHTML = '';
+      computedResults.forEach((item, idx) => {
+        appendResultCard(item.title, item.value, idx);
+      });
+
+      /* Populate popup modal results grid */
+      popResultsGrid.innerHTML = '';
+      popResultsGrid.classList.remove('hidden');
+      computedResults.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'popup-result-card';
+        card.style.animationDelay = `${idx * 60}ms`;
+        card.innerHTML = `<h5>${escapeHTML(item.title)}</h5><p>${escapeHTML(item.value)}</p>`;
+        popResultsGrid.appendChild(card);
+      });
+
+      document.getElementById('pop-relaunch-btn').classList.remove('hidden');
+      btn.disabled = false;
+
+      if (currentSource === 'adhoc') {
+        document.getElementById('save-banner').classList.remove('hidden');
+      }
     }
 
     function processResults(list, list2, mode) {
-      const slot = document.getElementById('slot');
-      const stage = document.getElementById('stage');
-      const results = document.getElementById('results');
-      const shuffled = shuffle(list);
-
-      if (window.confetti) window.confetti({ particleCount:80, spread:72, origin:{y:0.6} });
-      stage.dataset.state = 'revealed';
-      document.getElementById('stage-state').textContent = 'Résultat';
-      renderStageDecor(mode, list, list2);
-
-      if (mode === 'single') {
-        const count = Math.max(1, parseInt(document.getElementById('count').value,10)||1);
-        const winners = shuffled.slice(0, Math.min(count, shuffled.length));
-        slot.textContent = winners.length === 1 ? `🎉 ${winners[0]}` : '🎉 Gagnants';
-        winners.forEach((w,i) => appendResultCard(`Gagnant #${i+1}`, w, i));
-        return;
-      }
-      if (mode === 'order') {
-        slot.textContent = '📋 Ordre généré';
-        shuffled.forEach((item,i) => appendResultCard(`Rang #${i+1}`, item, i));
-        return;
-      }
-      if (mode === 'pairs') {
-        slot.textContent = '👥 Binômes';
-        for (let i = 0; i < shuffled.length; i += 2) {
-          const pair = shuffled.slice(i, i+2);
-          appendResultCard(pair.length===2 ? `Binôme #${i/2+1}` : 'Seul', pair.join(' & '), i/2);
-        }
-        return;
-      }
-      if (mode === 'teams') {
-        const tc = Math.max(2, parseInt(document.getElementById('team-count').value,10)||2);
-        const teams = Array.from({length:tc}, ()=>[]);
-        shuffled.forEach((item,i) => teams[i%tc].push(item));
-        slot.textContent = '🏆 Équipes';
-        teams.forEach((t,i) => appendResultCard(`Équipe ${i+1}`, t.join(', ')||'—', i));
-        return;
-      }
-      if (mode === 'match') {
-        const shuffled2 = shuffle(list2);
-        slot.textContent = '🔗 Associations';
-        shuffled.forEach((item,i) => appendResultCard(item, `➡️ ${shuffled2[i]||'—'}`, i));
-      }
+      /* Handled directly in finishDrawResults */
     }
 
     function appendResultCard(title, value, index) {
